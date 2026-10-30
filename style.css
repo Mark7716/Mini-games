@@ -1,0 +1,225 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    background: radial-gradient(circle at 20% 20%, #ff6b9d 0%, transparent 50%),
+                radial-gradient(circle at 80% 0%, #c44569 0%, transparent 50%),
+                radial-gradient(circle at 0% 80%, #f8b500 0%, transparent 50%),
+                radial-gradient(circle at 100% 80%, #6c5ce7 0%, transparent 50%),
+                linear-gradient(135deg, #a29bfe 0%, #fd79a8 25%, #fab1a0 50%, #74b9ff 75%, #55efc4 100%);
+    background-size: 200% 200%;
+    animation: rainbowShift 12s ease infinite;
+    min-height: 100vh;
+    color: #333;
+}
+
+@keyframes rainbowShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    25% {
+        background-position: 100% 50%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    75% {
+        background-position: 0% 100%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    color: white;
+}
+
+.logo {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: 20px;
+    opacity: 0.95;
+    font-weight: 300;
+}
+
+.main {
+    padding: 20px 0 60px;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.game-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    text-decoration: none;
+    color: #333;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+}
+
+.game-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+.game-card-content {
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.game-icon {
+    font-size: 60px;
+    margin-bottom: 15px;
+    line-height: 1;
+}
+
+.game-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.game-desc {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.play-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover .play-btn {
+    transform: scale(1.05);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.game-card.subway {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.game-card.subway .game-card-content {
+    color: white;
+}
+
+.game-card.subway .game-title,
+.game-card.subway .game-desc {
+    color: white;
+}
+
+.game-card.subway .play-btn {
+    background: white;
+    color: #f5576c;
+}
+
+.game-card.tir {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.game-card.tir .game-card-content {
+    color: white;
+}
+
+.game-card.tir .game-title,
+.game-card.tir .game-desc {
+    color: white;
+}
+
+.game-card.tir .play-btn {
+    background: white;
+    color: #00a8ff;
+}
+
+.game-card.runner {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.game-card.runner .game-card-content {
+    color: white;
+}
+
+.game-card.runner .game-title,
+.game-card.runner .game-desc {
+    color: white;
+}
+
+.game-card.runner .play-btn {
+    background: white;
+    color: #38a169;
+}
+
+.footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: white;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .logo {
+        font-size: 36px;
+    }
+    
+    .subtitle {
+        font-size: 18px;
+    }
+    
+    .games-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .game-card-content {
+        padding: 30px 20px;
+    }
+}

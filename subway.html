@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subway Rush</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 50%, #B0E0E6 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            z-index: 100;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+        }
+
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 22px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.2s;
+            pointer-events: all;
+            backdrop-filter: blur(4px);
+        }
+
+        .back-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .hud {
+            display: flex;
+            gap: 25px;
+            font-size: 20px;
+            font-weight: 700;
+            pointer-events: none;
+        }
+
+        .game-container {
+            position: relative;
+            width: min(95vw, 650px);
+            height: min(95vh, 900px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #8B7355 0%, #654321 30%, #4A3728 100%);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            gap: 20px;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .overlay h2 {
+            font-size: clamp(36px, 8vw, 56px);
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: #ff4757;
+        }
+
+        .overlay p {
+            font-size: clamp(18px, 4vw, 26px);
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #ff4757, #ff3838);
+            color: white;
+            border: none;
+            padding: 15px 45px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.5);
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 15px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        @media (max-width: 600px) {
+            .game-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+            .controls {
+                display: none;
+            }
+            .header {
+                padding: 10px 15px;
+            }
+            .hud {
+                font-size: 16px;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Меню</a>
+        <div class="hud">
+            <div>💰 <span id="coins">0</span></div>
+            <div>⭐ <span id="score">0</span></div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="game"></canvas>
+        <div id="startScreen" class="overlay">
+            <h2>SUBWAY RUSH</h2>
+            <p>Нажми чтобы начать</p>
+        </div>
+        <div id="gameOverScreen" class="overlay hidden">
+            <h2>ИГРА ОКОНЧЕНА</h2>
+            <p>Счёт: <span id="finalScore">0</span></p>
+            <p>Монетки: <span id="finalCoins">0</span></p>
+            <button class="restart-btn" onclick="restartGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        Мышь - движение по линиям / клик для прыжка | Клавиатура: ← → или A/D - смена линии | ↑ или Пробел - прыжок
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const coinsEl = document.getElementById('coins');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalCoinsEl = document.getElementById('finalCoins');
+
+        let lanes = [0, 0, 0];
+        let currentLane = 1;
+        let targetLane = 1;
+
+        const player = {
+            x: 0,
+            y: 0,
+            width: 42,
+            height: 64,
+            vy: 0,
+            jumping: false,
+            grounded: true
+        };
+
+        const gravity = 0.9;
+        const jumpForce = -18;
+
+        let obstacles = [];
+        let coins = [];
+        let roadLines = [];
+        let gameSpeed = 7;
+        let score = 0;
+        let coinCount = 0;
+        let gameRunning = false;
+        let gameOver = false;
+        let frameCount = 0;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            lanes[0] = canvas.width * 0.25;
+            lanes[1] = canvas.width * 0.5;
+            lanes[2] = canvas.width * 0.75;
+            
+            if (player.width > 0) {
+                player.x = lanes[targetLane];
+                if (!gameRunning) {
+                    player.y = canvas.height * 0.75;
+                }
+            }
+            
+            if (roadLines.length === 0) {
+                for (let i = 0; i < 12; i++) {
+                    roadLines.push({
+                        y: i * (canvas.height / 9),
+                        x: lanes[1]
+                    });
+                }
+            } else {
+                roadLines.forEach(line => {
+                    line.x = lanes[1];
+                });
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        document.addEventListener('keydown', handleKeyDown);
+        startScreen.addEventListener('click', startGame);
+        
+        canvas.addEventListener('click', handleMouseClick);
+        canvas.addEventListener('mousemove', handleMouseMove);
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameRunning = true;
+            gameOver = false;
+            score = 0;
+            coinCount = 0;
+            obstacles = [];
+            coins = [];
+            currentLane = 1;
+            targetLane = 1;
+            player.x = lanes[1];
+            player.y = canvas.height * 0.75;
+            player.vy = 0;
+            player.jumping = false;
+            player.grounded = true;
+            gameSpeed = 7;
+            frameCount = 0;
+            coinsEl.textContent = coinCount;
+            scoreEl.textContent = 0;
+            loop();
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function handleKeyDown(e) {
+            if (!gameRunning || gameOver) return;
+            
+            if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && targetLane > 0) {
+                targetLane--;
+            } else if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && targetLane < 2) {
+                targetLane++;
+            } else if ((e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') && player.grounded) {
+                e.preventDefault();
+                jump();
+            }
+        }
+        
+        function handleMouseClick(e) {
+            if (!gameRunning || gameOver) {
+                if (startScreen.classList.contains('hidden')) {
+                    return;
+                }
+                startGame();
+                return;
+            }
+            
+            if (player.grounded) {
+                jump();
+            }
+        }
+        
+        function handleMouseMove(e) {
+            if (!gameRunning || gameOver) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const width = rect.width;
+            
+            if (mouseX < width / 3) {
+                targetLane = 0;
+            } else if (mouseX > (width / 3) * 2) {
+                targetLane = 2;
+            } else {
+                targetLane = 1;
+            }
+        }
+
+        function jump() {
+            player.vy = jumpForce;
+            player.jumping = true;
+            player.grounded = false;
+        }
+
+        function spawnObstacle() {
+            if (frameCount % 55 === 0) {
+                const lane = Math.floor(Math.random() * 3);
+                obstacles.push({
+                    x: lanes[lane],
+                    y: -90,
+                    width: canvas.width * 0.12,
+                    height: canvas.height * 0.12,
+                    lane: lane
+                });
+            }
+        }
+
+        function spawnCoin() {
+            if (frameCount % 35 === 0 && Math.random() < 0.7) {
+                const lane = Math.floor(Math.random() * 3);
+                coins.push({
+                    x: lanes[lane],
+                    y: -35,
+                    radius: canvas.width * 0.03,
+                    lane: lane
+                });
+            }
+        }
+
+        function update() {
+            frameCount++;
+            score += gameSpeed * 0.01;
+            scoreEl.textContent = Math.floor(score);
+            
+            if (frameCount % 280 === 0 && gameSpeed < 13) {
+                gameSpeed += 0.5;
+            }
+
+            if (player.x < lanes[targetLane]) {
+                player.x += 10;
+            } else if (player.x > lanes[targetLane]) {
+                player.x -= 10;
+            }
+
+            player.vy += gravity;
+            player.y += player.vy;
+
+            const groundLevel = canvas.height * 0.75;
+            if (player.y >= groundLevel) {
+                player.y = groundLevel;
+                player.vy = 0;
+                player.jumping = false;
+                player.grounded = true;
+            }
+
+            roadLines.forEach(line => {
+                line.y += gameSpeed;
+                if (line.y > canvas.height) {
+                    line.y = -60;
+                }
+            });
+
+            spawnObstacle();
+            spawnCoin();
+
+            obstacles.forEach((obs, index) => {
+                obs.y += gameSpeed;
+                
+                if (Math.abs(obs.x - player.x) < player.width * 0.8 && obs.y < player.y + player.height * 0.8 && obs.y + obs.height > player.y) {
+                    if (!player.jumping || obs.y > player.y + 25) {
+                        endGame();
+                    }
+                }
+                
+                if (obs.y > canvas.height + 100) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            coins.forEach((coin, index) => {
+                coin.y += gameSpeed;
+                
+                if (Math.abs(coin.x - player.x) < player.width * 0.9 && coin.y < player.y + player.height && coin.y > player.y - 15) {
+                    coinCount++;
+                    coinsEl.textContent = coinCount;
+                    coins.splice(index, 1);
+                }
+                
+                if (coin.y > canvas.height + 50) {
+                    coins.splice(index, 1);
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const grassWidth = canvas.width * 0.15;
+            
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 0, grassWidth, canvas.height);
+            ctx.fillRect(canvas.width - grassWidth, 0, grassWidth, canvas.height);
+
+            ctx.fillStyle = '#555';
+            ctx.fillRect(grassWidth, 0, canvas.width - grassWidth * 2, canvas.height);
+
+            ctx.fillStyle = '#FFD700';
+            roadLines.forEach(line => {
+                ctx.fillRect(line.x - 3, line.y, 6, canvas.height * 0.07);
+            });
+
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(grassWidth, 0, 4, canvas.height);
+            ctx.fillRect(canvas.width - grassWidth - 4, 0, 4, canvas.height);
+
+            coins.forEach(coin => {
+                ctx.beginPath();
+                ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFD700';
+                ctx.fill();
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(coin.x, coin.y, coin.radius * 0.6, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFA500';
+                ctx.fill();
+            });
+
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#8B0000';
+                ctx.fillRect(obs.x - obs.width / 2, obs.y, obs.width, obs.height);
+                ctx.fillStyle = '#DC143C';
+                ctx.fillRect(obs.x - obs.width / 2, obs.y, obs.width, obs.height * 0.2);
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(obs.x - 2, obs.y + obs.height * 0.2, 4, obs.height * 0.8);
+            });
+
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.fillStyle = '#4169E1';
+            ctx.fillRect(-player.width / 2, 0, player.width, player.height);
+            
+            ctx.fillStyle = '#FFB6C1';
+            ctx.fillRect(-player.width / 2 + 5, 5, player.width - 10, player.height * 0.33);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(-8, 12, 5, 5);
+            ctx.fillRect(3, 12, 5, 5);
+            
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(-8, 24, 16, 4);
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-16, player.height, 12, 16);
+            ctx.fillRect(4, player.height, 12, 16);
+            ctx.restore();
+        }
+
+        function loop() {
+            if (!gameRunning || gameOver) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            gameOver = true;
+            finalScoreEl.textContent = Math.floor(score);
+            finalCoinsEl.textContent = coinCount;
+            setTimeout(() => {
+                gameOverScreen.classList.remove('hidden');
+            }, 400);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

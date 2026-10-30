@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бегун</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #87CEEB 0%, #f0f8ff 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .back-btn {
+            color: #333;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 22px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            pointer-events: all;
+            backdrop-filter: blur(4px);
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .score-display {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .game-container {
+            position: relative;
+            width: min(98vw, 1300px);
+            height: min(80vh, 500px);
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #8B7355 70%, #654321 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+            border: 4px solid #333;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            gap: 15px;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .overlay h2 {
+            font-size: 42px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .overlay p {
+            font-size: 18px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 850px) {
+            .game-container {
+                width: 95vw;
+                height: 250px;
+            }
+            .controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Меню</a>
+        <div class="score-display">Очки: <span id="score">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="game" width="800" height="300"></canvas>
+        <div id="startScreen" class="overlay">
+            <h2>БЕГУН</h2>
+            <p>Нажми пробел или кликни чтобы прыгнуть</p>
+            <p>Нажми чтобы начать</p>
+        </div>
+        <div id="gameOverScreen" class="overlay hidden">
+            <h2>ИГРА ОКОНЧЕНА</h2>
+            <p>Очки: <span id="finalScore">0</span></p>
+            <button class="restart-btn" onclick="restartGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        Пробел или клик - прыжок
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('finalScore');
+
+        const player = {
+            x: 80,
+            y: 210,
+            width: 40,
+            height: 60,
+            vy: 0,
+            jumping: false,
+            grounded: true
+        };
+
+        const gravity = 0.8;
+        const jumpForce = -16;
+
+        let obstacles = [];
+        let clouds = [];
+        let groundX = 0;
+        let gameSpeed = 8;
+        let score = 0;
+        let gameRunning = false;
+        let gameOver = false;
+        let frameCount = 0;
+
+        for (let i = 0; i < 3; i++) {
+            clouds.push({
+                x: i * 300,
+                y: 30,
+                width: 60,
+                height: 30
+            });
+        }
+
+        document.addEventListener('keydown', handleKeyDown);
+        canvas.addEventListener('click', handleClick);
+        startScreen.addEventListener('click', startGame);
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameRunning = true;
+            gameOver = false;
+            score = 0;
+            obstacles = [];
+            player.y = 210;
+            player.vy = 0;
+            player.jumping = false;
+            player.grounded = true;
+            gameSpeed = 8;
+            frameCount = 0;
+            loop();
+        }
+
+        function restartGame() {
+            gameOverScreen.classList.add('hidden');
+            startGame();
+        }
+
+        function handleKeyDown(e) {
+            if (e.code === 'Space' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!gameRunning && !gameOver) {
+                    startGame();
+                    return;
+                }
+                if (gameRunning && !gameOver && player.grounded) {
+                    jump();
+                }
+            }
+        }
+
+        function handleClick() {
+            if (!gameRunning && !gameOver) {
+                startGame();
+                return;
+            }
+            if (gameRunning && !gameOver && player.grounded) {
+                jump();
+            }
+        }
+
+        function jump() {
+            player.vy = jumpForce;
+            player.jumping = true;
+            player.grounded = false;
+        }
+
+        function spawnObstacle() {
+            if (frameCount % 90 === 0) {
+                obstacles.push({
+                    x: 800,
+                    y: 215,
+                    width: 25,
+                    height: 55
+                });
+            }
+        }
+
+        function update() {
+            frameCount++;
+            score += gameSpeed * 0.01;
+            scoreEl.textContent = Math.floor(score);
+
+            if (frameCount % 500 === 0 && gameSpeed < 14) {
+                gameSpeed += 0.5;
+            }
+
+            player.vy += gravity;
+            player.y += player.vy;
+
+            if (player.y >= 210) {
+                player.y = 210;
+                player.vy = 0;
+                player.jumping = false;
+                player.grounded = true;
+            }
+
+            groundX -= gameSpeed;
+            if (groundX <= -40) groundX = 0;
+
+            clouds.forEach(cloud => {
+                cloud.x -= gameSpeed * 0.3;
+                if (cloud.x < -60) {
+                    cloud.x = 800 + Math.random() * 200;
+                }
+            });
+
+            spawnObstacle();
+
+            obstacles.forEach((obs, index) => {
+                obs.x -= gameSpeed;
+                
+                if (player.x < obs.x + obs.width - 5 &&
+                    player.x + player.width - 5 > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y) {
+                    endGame();
+                }
+                
+                if (obs.x < -50) {
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, 800, 300);
+
+            // Облака
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, 15, 0, Math.PI * 2);
+                ctx.arc(cloud.x + 20, cloud.y, 20, 0, Math.PI * 2);
+                ctx.arc(cloud.x + 40, cloud.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Земля
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, 210, 800, 90);
+
+            // Трава
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 210, 800, 5);
+
+            // Линия на земле
+            ctx.fillStyle = '#654321';
+            for (let i = 0; i < 20; i++) {
+                ctx.fillRect(i * 40 + groundX, 250, 20, 3);
+            }
+
+            // Кактусы
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#2E8B57';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(obs.x + 5, obs.y - 10, 5, 10);
+                ctx.fillRect(obs.x + 15, obs.y - 15, 5, 15);
+            });
+
+            // Игрок
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 25, player.y + 10, 5, 5);
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(player.x + 15, player.y + 15, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(player.x + 5, player.y + 60, 10, 8);
+            ctx.fillRect(player.x + 25, player.y + 60, 10, 8);
+        }
+
+        function loop() {
+            if (!gameRunning || gameOver) return;
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            gameOver = true;
+            finalScoreEl.textContent = Math.floor(score);
+            setTimeout(() => {
+                gameOverScreen.classList.remove('hidden');
+            }, 300);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
